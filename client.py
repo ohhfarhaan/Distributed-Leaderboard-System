@@ -3,6 +3,7 @@ import threading
 import json
 import tkinter as tk
 from tkinter import font as tkfont
+import ssl
 
 SERVER_HOST = "127.0.0.1"
 SERVER_PORT = 9999
@@ -207,21 +208,38 @@ class LeaderboardApp:
 
     # ─── Networking ───────────────────────────────────────────────────────────
 
+     # ─── Networking ───────────────────────────────────────────────────────────
+
     def _connect(self) -> None:
         if self._reconnect_after:
             self.root.after_cancel(self._reconnect_after)
             self._reconnect_after = None
+
         try:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # SSL context (allow self-signed certificate)
+            context = ssl._create_unverified_context()
+
+            # create TCP socket
+            raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+            # wrap socket with SSL
+            self.sock = context.wrap_socket(raw_sock)
+
+            # connect to server
             self.sock.connect((SERVER_HOST, SERVER_PORT))
+
             self.connected = True
             self._buf = ""
             self.conn_var.set(f"Connected  ·  {SERVER_HOST}:{SERVER_PORT}")
+
             threading.Thread(target=self._listen, daemon=True).start()
+
         except Exception as e:
             self.connected = False
-            self.conn_var.set(f"Connection failed — retrying…")
+            self.conn_var.set("Connection failed — retrying…")
             self._reconnect_after = self.root.after(4000, self._connect)
+            
+        
 
     def _listen(self) -> None:
         try:

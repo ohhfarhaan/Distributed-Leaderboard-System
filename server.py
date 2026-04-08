@@ -2,6 +2,7 @@ import socket
 import threading
 import json
 import os
+import ssl
 
 HOST = "0.0.0.0"
 PORT = 9999
@@ -141,11 +142,21 @@ def handle_client(conn: socket.socket, addr: tuple) -> None:
 # ─── Entry point ─────────────────────────────────────────────────────────────
 
 def main() -> None:
+
+    # create SSL context
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
+
+    # normal TCP socket
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind((HOST, PORT))
     server.listen()
-    print(f"[*] Leaderboard server listening on port {PORT}")
+
+    # wrap socket with SSL
+    server = context.wrap_socket(server, server_side=True)
+
+    print(f"[*] Secure Leaderboard server listening on port {PORT}")
 
     try:
         while True:
